@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+service MapReduceMaster { 
+  rpc GetMaps(WorkerRequestGetMap) returns(WorkerResponseGetMap) {}
+  rpc CreateMap(WorkerRequestCreateMap) returns(WorkerResponseCreateMap) {}
+}
+
+message WorkerRequestCreateMap { 
+  int32 id = 1;
+  string message = 2;
+}
+
+message WorkerRequestGetMap { 
+  int32 id = 1;
+}
+
+message WorkerResponseCreateMap { 
+  string response = 1;
+}
+
+message WorkerResponseGetMap { 
+ string message = 1;
+}
+
