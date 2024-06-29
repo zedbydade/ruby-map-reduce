@@ -7,18 +7,29 @@ require_relative './lib/server_services_pb'
 
 class Master < MapReduceMaster::Service
   @data = {}
-  attr_accessor :worker_timeout, :logger
+  attr_accessor :worker_timeout, :logger, :worker_count
   attr_reader :reduce_workers
 
   class << self
     attr_accessor :data
   end
 
-  def initialize(logger:, worker_timeout: 10, worker_count: 2, reduce_count: 1)
+  def initialize(logger:, worker_timeout: 10, reduce_count: 1)
     @worker_timeout = worker_timeout
-    @worker_count = worker_count
+    @worker_count = 0
     @reduce_workers = create_reduce_workers(reduce_count)
     @logger = logger
+  end
+
+  def register_worker(worker_req, _)
+    uuid = worker_req.uuid
+    ip = worker_req.ip
+    mutex = Mutex.new
+    mutex.lock
+    self.class.data[uuid] = { uuid: uiid, ip: }
+    @worker_count += 1
+  ensure
+    mutex.unlock
   end
 
   def create_map(maps_req, _)
@@ -35,15 +46,13 @@ class Master < MapReduceMaster::Service
 
   def wait_for_enough_workers
     logger.info('[Master] Wait for the creation of workers')
-    workers = []
     Async do
       1.upto(@worker_count) do
         Async do
-          workers << Worker.start_worker(logger)
+          Worker.start_worker(logger)
         end
       end
     end
-    p workers
     logger.info('[Master] Finished!')
   end
 
