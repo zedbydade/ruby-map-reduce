@@ -6,19 +6,15 @@ require 'digest'
 require_relative './lib/server_services_pb'
 
 class Master < MapReduceMaster::Service
-  @data = {}
-  attr_accessor :worker_timeout, :logger, :worker_count
+  attr_accessor :worker_timeout, :logger, :worker_count, :data
   attr_reader :reduce_workers
-
-  class << self
-    attr_accessor :data
-  end
 
   def initialize(logger:, worker_timeout: 10, reduce_count: 1)
     @worker_timeout = worker_timeout
     @worker_count = 0
     @reduce_workers = create_reduce_workers(reduce_count)
     @logger = logger
+    @data = {}
   end
 
   def register_worker(worker_req, _)
@@ -26,33 +22,17 @@ class Master < MapReduceMaster::Service
     ip = worker_req.ip
     mutex = Mutex.new
     mutex.lock
-    self.class.data[uuid] = { uuid: uiid, ip: }
+    data[uuid] = { uuid:, ip: }
     @worker_count += 1
+    @logger.info('[Master] Worker register success')
+    RegisterWorkerResult.new(result: true)
   ensure
     mutex.unlock
   end
 
-  def create_map(maps_req, _)
-    self.class.data[maps_req.id] = maps_req.message
-
-    WorkerRequestCreateMap.new(message: "Succesful create message #{maps_req.message} with id #{maps_req.id}")
-  end
-
-  def get_maps(maps_req, _)
-    WorkerResponseGetMap.new(message: self.class.data[maps_req.id])
-  ensure
-    self.class.data.delete(maps_req.id)
-  end
-
   def wait_for_enough_workers
     logger.info('[Master] Wait for the creation of workers')
-    Async do
-      1.upto(@worker_count) do
-        Async do
-          Worker.start_worker(logger)
-        end
-      end
-    end
+    Worker.start_worker(logger)
     logger.info('[Master] Finished!')
   end
 

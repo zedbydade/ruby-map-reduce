@@ -13,8 +13,7 @@ module MapReduceMaster
     self.unmarshal_class_method = :decode
     self.service_name = 'MapReduceMaster'
 
-    rpc :GetMaps, ::WorkerRequestGetMap, ::WorkerResponseGetMap
-    rpc :CreateMap, ::WorkerRequestCreateMap, ::WorkerResponseCreateMap
+    rpc :RegisterWorker, ::RegisterWorkerRequest, ::RegisterWorkerResult
   end
 
   Stub = Service.rpc_stub_class

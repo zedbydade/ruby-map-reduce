@@ -1,5 +1,7 @@
-require_relative './lib/worker_services_pb'
-require 'securandom'
+require './lib/worker_services_pb'
+require 'google/protobuf'
+require './lib/server_services_pb'
+require './lib/server_pb'
 require 'async'
 require 'logger'
 
@@ -28,7 +30,7 @@ class Worker < WorkerServer::Service
     map_function = -> { [1, 2, 3, 4].map { |element| element * 2 } }
     reduce_function = -> { [1, 4, 6, 8].reduce(0) { |sum, element| sum + (element * 2) } }
     logger.info('[Worker] load functions finish')
-
+    register_worker
   end
 
   def self.start_worker(logger)
@@ -50,5 +52,9 @@ class Worker < WorkerServer::Service
     SecureRandom.uuid
   end
 
-  def register_worker; end
+  def register_worker
+    stub = MapReduceMaster::Stub.new(@master_ip, :this_channel_is_insecure)
+    request = RegisterWorkerRequest.new(uuid: @uuid, ip: "localhost:#{@port}")
+    stub.register_worker(request)
+  end
 end

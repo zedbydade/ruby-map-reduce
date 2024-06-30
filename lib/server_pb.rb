@@ -5,12 +5,10 @@
 require 'google/protobuf'
 
 
-descriptor_data = "\n\x0cserver.proto\"5\n\x16WorkerRequestCreateMap\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\"!\n\x13WorkerRequestGetMap\x12\n\n\x02id\x18\x01 \x01(\x05\"+\n\x17WorkerResponseCreateMap\x12\x10\n\x08response\x18\x01 \x01(\t\"\'\n\x14WorkerResponseGetMap\x12\x0f\n\x07message\x18\x01 \x01(\t2\x8d\x01\n\x0fMapReduceMaster\x12\x38\n\x07GetMaps\x12\x14.WorkerRequestGetMap\x1a\x15.WorkerResponseGetMap\"\x00\x12@\n\tCreateMap\x12\x17.WorkerRequestCreateMap\x1a\x18.WorkerResponseCreateMap\"\x00\x62\x06proto3"
+descriptor_data = "\n\x0cserver.proto\"&\n\x14RegisterWorkerResult\x12\x0e\n\x06result\x18\x01 \x01(\x08\"1\n\x15RegisterWorkerRequest\x12\x0c\n\x04uuid\x18\x01 \x01(\t\x12\n\n\x02ip\x18\x02 \x01(\t2T\n\x0fMapReduceMaster\x12\x41\n\x0eRegisterWorker\x12\x16.RegisterWorkerRequest\x1a\x15.RegisterWorkerResult\"\x00\x62\x06proto3"
 
 pool = Google::Protobuf::DescriptorPool.generated_pool
 pool.add_serialized_file(descriptor_data)
 
-WorkerRequestCreateMap = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("WorkerRequestCreateMap").msgclass
-WorkerRequestGetMap = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("WorkerRequestGetMap").msgclass
-WorkerResponseCreateMap = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("WorkerResponseCreateMap").msgclass
-WorkerResponseGetMap = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("WorkerResponseGetMap").msgclass
+RegisterWorkerResult = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("RegisterWorkerResult").msgclass
+RegisterWorkerRequest = ::Google::Protobuf::DescriptorPool.generated_pool.lookup("RegisterWorkerRequest").msgclass
