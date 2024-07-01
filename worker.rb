@@ -6,14 +6,17 @@ require 'async'
 require 'logger'
 
 class Worker < WorkerServer::Service
-  attr_accessor :reduce_number, :master_ip, :port, :logger, :uuid
+  attr_accessor :worker_number, :master_ip, :port, :logger, :uuid
 
-  def initialize(reduce_number:, master_ip:, port:, logger:)
-    @reducer_number = reduce_number
+  def initialize(worker_number:, master_ip:, port:, logger:)
+    @worker_number = worker_number
     @uuid = generate_uuid
     @master_ip = master_ip
     @port = port
     @logger = logger
+  end
+
+  def map_operation(worker_req, _)
   end
 
   def start
@@ -27,19 +30,16 @@ class Worker < WorkerServer::Service
     end
     logger.info('[Worker] Worker gRPC thread start')
 
-    map_function = -> { [1, 2, 3, 4].map { |element| element * 2 } }
-    reduce_function = -> { [1, 4, 6, 8].reduce(0) { |sum, element| sum + (element * 2) } }
     logger.info('[Worker] load functions finish')
     register_worker
   end
 
-  def self.start_worker(logger)
-    reduce_number = 1
+  def self.start_worker(logger, worker_number)
     master_ip = '0.0.0.0:50051'
     Async do
-      1.upto(10) do |i|
+      1.upto(worker_number) do |i|
         Async do
-          worker = new(reduce_number:, master_ip:, port: "3000#{i}", logger:)
+          worker = new(worker_number:, master_ip:, port: "3000#{i}", logger:)
           worker.start
         end
       end
@@ -56,5 +56,6 @@ class Worker < WorkerServer::Service
     stub = MapReduceMaster::Stub.new(@master_ip, :this_channel_is_insecure)
     request = RegisterWorkerRequest.new(uuid: @uuid, ip: "localhost:#{@port}")
     stub.register_worker(request)
+    @logger.info('[Worker] Worker register itself finish')
   end
 end
