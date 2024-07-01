@@ -1,8 +1,8 @@
 syntax = "proto3";
 
 service Worker {
-    rpc Map (MapInfo) returns (Result);
-    rpc Reduce (ReduceInfo) returns (Result);
+    rpc MapOperation (MapInfo) returns (Result);
+    rpc ReduceOperation (ReduceInfo) returns (Result);
 }
 
 message Result {
@@ -11,9 +11,8 @@ message Result {
 }
 
 message MapInfo {
-  string FileName = 1;
-  int64 From = 2;
-  int64 To = 3; 
+  string filename = 1;
+  string block = 2;
 }
 
 message ReduceInfo {
