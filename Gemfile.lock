@@ -42,6 +42,7 @@ GEM
     grpc-tools (1.64.0)
     io-event (1.6.5)
     json (2.7.2)
+    method_source (1.1.0)
     msgpack (1.7.2)
 
 PLATFORMS
@@ -56,6 +57,7 @@ DEPENDENCIES
   async (~> 2.12)
   grpc (~> 1.64)
   grpc-tools (~> 1.64)
+  method_source (~> 1.1)
   msgpack (~> 1.7)
 
 BUNDLED WITH
