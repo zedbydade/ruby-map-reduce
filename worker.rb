@@ -17,6 +17,7 @@ class Worker < WorkerServer::Service
   end
 
   def map_operation(worker_req, _)
+    block = MessagePack.unpack(worker_req.msg)
   end
 
   def start
@@ -47,6 +48,10 @@ class Worker < WorkerServer::Service
   end
 
   private
+
+  def emit(k, count:)
+    [k, count]
+  end
 
   def generate_uuid
     SecureRandom.uuid
