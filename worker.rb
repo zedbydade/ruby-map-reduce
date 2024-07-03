@@ -1,4 +1,5 @@
 require './lib/worker_services_pb'
+require 'base64'
 require 'google/protobuf'
 require './lib/server_services_pb'
 require './lib/server_pb'
@@ -6,7 +7,7 @@ require 'async'
 require 'logger'
 
 class Worker < WorkerServer::Service
-  attr_accessor :worker_number, :master_ip, :port, :logger, :uuid
+  attr_accessor :worker_number, :master_ip, :port, :logger, :uuid, :result
 
   def initialize(worker_number:, master_ip:, port:, logger:)
     @worker_number = worker_number
@@ -14,10 +15,18 @@ class Worker < WorkerServer::Service
     @master_ip = master_ip
     @port = port
     @logger = logger
+    @result = []
   end
 
   def map_operation(worker_req, _)
-    block = MessagePack.unpack(worker_req.msg)
+    block = eval(Base64.decode64(worker_req.block))
+    block.call(File.read(worker_req.filename))
+    File.open('./example.txt', 'a') do |file|
+      result.each do |array|
+        file.puts array.inspect
+      end
+    end
+    MapInfoResult.new(uuid:, result: true)
   end
 
   def start
@@ -50,7 +59,7 @@ class Worker < WorkerServer::Service
   private
 
   def emit(k, count:)
-    [k, count]
+    result << [k, count]
   end
 
   def generate_uuid
