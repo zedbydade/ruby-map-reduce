@@ -4,6 +4,7 @@ require 'pathname'
 require_relative 'reduce_worker'
 require_relative 'worker'
 require 'digest'
+require 'method_source'
 require_relative './lib/server_services_pb'
 require_relative './lib/worker_services_pb'
 
@@ -16,7 +17,7 @@ class Master < MapReduceMaster::Service
     @worker_count = worker_count
     @map_count = map_count
     @logger = logger
-    @data = {}
+    @data = []
   end
 
   def register_worker(worker_req, _)
@@ -24,7 +25,7 @@ class Master < MapReduceMaster::Service
     ip = worker_req.ip
     mutex = Mutex.new
     mutex.lock
-    data[uuid] = { uuid:, ip:, status: 'idle', type: nil }
+    data << { uuid:, ip:, status: 'idle', type: nil }
     # That count is being back by the ruby GIL
     @worker_count += 1
     @logger.info('[Master] Worker register success')
@@ -40,16 +41,27 @@ class Master < MapReduceMaster::Service
   end
 
   def distribute_work
+    proc = proc do |input|
+      input = input.gsub(/[\s,'"!]/, '')
+      input.each_char do |l|
+        emit(l, count: 1)
+      end
+    end
+    message = Base64.encode64(proc.source)
     path_name = Pathname.new('./test/joyboy.txt')
     key = path_name.to_path
     logger.info('[Master] Start to distribute work')
     files = split_files(key, path_name)
-    data.each do |uuid|
-      break if files.empty?
+    Async do
+      1.upto(files.count) do
+        data.each do |worker|
+          break if files.empty?
 
-      stub = MapReduceMaster::Stub.new(uuid[:ip], :this_channel_is_insecure)
-      request = MapOperation.new(uuid: @uuid, ip: "localhost:#{@port}")
-      stub.map_operation(filename: files.pop, block:)
+          stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
+          request = MapInfo.new(filename: files.pop, block: message)
+          stub.map_operation(request)
+        end
+      end
     end
   end
 
