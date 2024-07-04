@@ -26,6 +26,7 @@ class Worker < WorkerServer::Service
         file.puts array.inspect
       end
     end
+    logger.info("[Worker] Worker #{uuid} gRPC finished the map operation")
     MapInfoResult.new(uuid:, result: true)
   end
 

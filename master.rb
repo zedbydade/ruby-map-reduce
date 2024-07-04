@@ -9,7 +9,7 @@ require_relative './lib/server_services_pb'
 require_relative './lib/worker_services_pb'
 
 class Master < MapReduceMaster::Service
-  attr_accessor :worker_timeout, :logger, :worker_count, :data
+  attr_accessor :worker_timeout, :logger, :worker_count, :data, :files
   attr_reader :reduce_workers
 
   def initialize(logger:, worker_timeout: 10, reduce_count: 5, map_count: 5, worker_count: 0)
@@ -18,6 +18,7 @@ class Master < MapReduceMaster::Service
     @map_count = map_count
     @logger = logger
     @data = []
+    @files = nil
   end
 
   def register_worker(worker_req, _)
@@ -25,7 +26,7 @@ class Master < MapReduceMaster::Service
     ip = worker_req.ip
     mutex = Mutex.new
     mutex.lock
-    data << { uuid:, ip:, status: 'idle', type: nil }
+    data << { uuid:, ip:, status: 'idle', type: worker_req.type }
     # That count is being back by the ruby GIL
     @worker_count += 1
     @logger.info('[Master] Worker register success')
@@ -40,20 +41,11 @@ class Master < MapReduceMaster::Service
     logger.info('[Master] Finished!')
   end
 
-  def distribute_work
-    proc = proc do |input|
-      input = input.gsub(/[\s,'"!]/, '')
-      input.each_char do |l|
-        emit(l, count: 1)
-      end
-    end
-    message = Base64.encode64(proc.source)
-    path_name = Pathname.new('./test/joyboy.txt')
-    key = path_name.to_path
-    logger.info('[Master] Start to distribute work')
-    files = split_files(key, path_name)
-    Async do
-      1.upto(files.count) do
+  def map(&block)
+    block = block.source.sub(/^\s*master\.map do\s*\n/, '').sub(/^\s*end\s*\n/, '')
+    message = Base64.encode64(block)
+    Thread.new do
+      loop do
         data.each do |worker|
           break if files.empty?
 
@@ -63,6 +55,13 @@ class Master < MapReduceMaster::Service
         end
       end
     end
+  end
+
+  def distribute_input
+    path_name = Pathname.new('./test/joyboy.txt')
+    key = path_name.to_path
+    logger.info('[Master] Start to distribute input')
+    @files = split_files(key, path_name)
   end
 
   private

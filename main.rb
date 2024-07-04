@@ -12,7 +12,15 @@ def start_master(_files, reduce_count, worker_timeout, worker_count, logger, map
     grpc_server.run_till_terminated
   end
   master.wait_for_enough_workers
-  master.distribute_work
+  master.distribute_input
+  master.map do
+    proc do |input|
+      input = input.gsub(/[\s,'"!]/, '')
+      input.each_char do |l|
+        emit(l, count: 1)
+      end
+    end
+  end
   master
 end
 
