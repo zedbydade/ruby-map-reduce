@@ -13,8 +13,8 @@ module WorkerServer
     self.unmarshal_class_method = :decode
     self.service_name = 'Worker'
 
-    rpc :MapOperation, ::MapInfo, ::MapInfoResult
-    rpc :ReduceOperation, ::ReduceInfo, ::MapInfoResult
+    rpc :MapOperation, ::MapInfo, ::Empty
+    rpc :ReduceOperation, ::ReduceInfo, ::Empty
   end
 
   Stub = Service.rpc_stub_class

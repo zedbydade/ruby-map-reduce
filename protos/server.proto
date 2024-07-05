@@ -2,6 +2,17 @@ syntax = "proto3";
 
 service MapReduceMaster { 
   rpc RegisterWorker(RegisterWorkerRequest) returns(RegisterWorkerResult) {}
+  rpc Ping (WorkerInfo) returns (Empty);
+}
+
+message Empty {
+
+}
+
+message WorkerInfo {
+  string uuid = 1;
+  string success = 2;
+  string filename = 3;
 }
 
 message RegisterWorkerResult {
@@ -11,4 +22,5 @@ message RegisterWorkerResult {
 message RegisterWorkerRequest { 
   string uuid = 1; 
   string ip = 2;
+  string type = 3;
 }

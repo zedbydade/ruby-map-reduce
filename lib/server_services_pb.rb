@@ -14,6 +14,7 @@ module MapReduceMaster
     self.service_name = 'MapReduceMaster'
 
     rpc :RegisterWorker, ::RegisterWorkerRequest, ::RegisterWorkerResult
+    rpc :Ping, ::WorkerInfo, ::Empty
   end
 
   Stub = Service.rpc_stub_class

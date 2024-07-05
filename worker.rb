@@ -27,7 +27,14 @@ class Worker < WorkerServer::Service
       end
     end
     logger.info("[Worker] Worker #{uuid} gRPC finished the map operation")
-    MapInfoResult.new(uuid:, result: true)
+    stub = MapReduceMaster::Stub.new(@master_ip, :this_channel_is_insecure)
+    request = RegisterWorkerRequest.new(uuid: @uuid, success: 'true', filename: worker_req.filename)
+    stub.ping(request)
+    Empty.new
+  rescue StandardError
+    stub = MapReduceMaster::Stub.new(@master_ip, :this_channel_is_insecure)
+    request = RegisterWorkerRequest.new(uuid: @uuid, success: nil)
+    stub.ping(request)
   end
 
   def start
@@ -69,7 +76,7 @@ class Worker < WorkerServer::Service
 
   def register_worker
     stub = MapReduceMaster::Stub.new(@master_ip, :this_channel_is_insecure)
-    request = RegisterWorkerRequest.new(uuid: @uuid, ip: "localhost:#{@port}")
+    request = RegisterWorkerRequest.new(uuid: @uuid, ip: "localhost:#{@port}", type: 'map')
     stub.register_worker(request)
     @logger.info('[Worker] Worker register itself finish')
   end

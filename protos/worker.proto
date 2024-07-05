@@ -1,8 +1,17 @@
 syntax = "proto3";
 
 service Worker {
-    rpc MapOperation (MapInfo) returns (MapInfoResult);
-    rpc ReduceOperation (ReduceInfo) returns (MapInfoResult);
+    rpc MapOperation (MapInfo) returns (Empty);
+    rpc ReduceOperation (ReduceInfo) returns (Empty);
+}
+
+message Empty {
+
+}
+
+message WorkerInfo {
+  string uuid = 1;
+  string success = 2;
 }
 
 message MapInfoResult {

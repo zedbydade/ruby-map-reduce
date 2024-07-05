@@ -21,12 +21,23 @@ class Master < MapReduceMaster::Service
     @files = nil
   end
 
+  def ping(worker_req, _)
+    uuid = worker_req.uuid
+    worker = data.find { |w| w[:uuid] == uuid }
+    worker[:status] = 'idle'
+    return nil if success == 'true'
+
+    @files << worker_req.filename
+    Empty.new
+  end
+
   def register_worker(worker_req, _)
     uuid = worker_req.uuid
+    type = worker_req.type
     ip = worker_req.ip
     mutex = Mutex.new
     mutex.lock
-    data << { uuid:, ip:, status: 'idle', type: worker_req.type }
+    data << ({ uuid:, ip:, status: 'idle', type: })
     # That count is being back by the ruby GIL
     @worker_count += 1
     @logger.info('[Master] Worker register success')
@@ -46,11 +57,14 @@ class Master < MapReduceMaster::Service
     message = Base64.encode64(block)
     Thread.new do
       loop do
-        data.each do |worker|
-          break if files.empty?
+        workers = data.select { |w| w[:status] == 'idle' && w[:type] == 'map' }
 
+        break if files.empty? && workers.count.positive?
+
+        workers.each do |worker|
           stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
           request = MapInfo.new(filename: files.pop, block: message)
+          worker[:status] = 'processing'
           stub.map_operation(request)
         end
       end
