@@ -1,8 +1,8 @@
-require './lib/worker_services_pb'
+require_relative './lib/worker_services_pb'
 require 'base64'
 require 'google/protobuf'
-require './lib/server_services_pb'
-require './lib/server_pb'
+require_relative './lib/server_services_pb'
+require_relative './lib/server_pb'
 require 'async'
 require 'logger'
 
@@ -28,12 +28,13 @@ class Worker < WorkerServer::Service
     end
     logger.info("[Worker] Worker #{uuid} gRPC finished the map operation")
     stub = MapReduceMaster::Stub.new(@master_ip, :this_channel_is_insecure)
-    request = RegisterWorkerRequest.new(uuid: @uuid, success: 'true', filename: worker_req.filename)
+    request = WorkerInfo.new(uuid: @uuid, success: 'true', filename: worker_req.filename)
     stub.ping(request)
     Empty.new
-  rescue StandardError
+  rescue StandardError => e
+    logger.error("[Worker] #{uuid} with error #{e}")
     stub = MapReduceMaster::Stub.new(@master_ip, :this_channel_is_insecure)
-    request = RegisterWorkerRequest.new(uuid: @uuid, success: nil)
+    request = WorkerInfo.new(uuid: @uuid, success: nil, filename: worker_req.filename)
     stub.ping(request)
   end
 

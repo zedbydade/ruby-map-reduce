@@ -1,5 +1,6 @@
 require 'grpc'
 require 'async'
+require 'async/semaphore'
 require 'pathname'
 require_relative 'reduce_worker'
 require_relative 'worker'
@@ -23,11 +24,16 @@ class Master < MapReduceMaster::Service
 
   def ping(worker_req, _)
     uuid = worker_req.uuid
+    success = worker_req.success
     worker = data.find { |w| w[:uuid] == uuid }
     worker[:status] = 'idle'
-    return nil if success == 'true'
 
-    @files << worker_req.filename
+    if success == 'true'
+      logger.info("[Master] Worker #{uuid} completed the map operation succesful")
+    else
+      @files << worker_req.filename
+    end
+
     Empty.new
   end
 
@@ -57,15 +63,21 @@ class Master < MapReduceMaster::Service
     message = Base64.encode64(block)
     Thread.new do
       loop do
-        workers = data.select { |w| w[:status] == 'idle' && w[:type] == 'map' }
+        Async do
+          workers = data.select { |w| w[:status] == 'idle' && w[:type] == 'map' }.first(files.count)
 
-        break if files.empty? && workers.count.positive?
+          break if files.empty? && workers.count.positive?
 
-        workers.each do |worker|
-          stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
-          request = MapInfo.new(filename: files.pop, block: message)
-          worker[:status] = 'processing'
-          stub.map_operation(request)
+          semaphore = Async::Semaphore.new(workers.count)
+
+          workers.each do |worker|
+            semaphore.async do
+              stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
+              request = MapInfo.new(filename: files.pop, block: message)
+              worker[:status] = 'processing'
+              stub.map_operation(request)
+            end
+          end
         end
       end
     end
