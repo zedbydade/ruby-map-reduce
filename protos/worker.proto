@@ -1,17 +1,10 @@
 syntax = "proto3";
 
+import "server.proto";
+
 service Worker {
     rpc MapOperation (MapInfo) returns (Empty);
     rpc ReduceOperation (ReduceInfo) returns (Empty);
-}
-
-message Empty {
-
-}
-
-message WorkerInfo {
-  string uuid = 1;
-  string success = 2;
 }
 
 message MapInfoResult {

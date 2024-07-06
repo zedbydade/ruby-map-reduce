@@ -2,7 +2,7 @@ syntax = "proto3";
 
 service MapReduceMaster { 
   rpc RegisterWorker(RegisterWorkerRequest) returns(RegisterWorkerResult) {}
-  rpc Ping (WorkerInfo) returns (Empty);
+  rpc Ping(WorkerInfo) returns (Empty);
 }
 
 message Empty {
