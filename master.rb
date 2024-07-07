@@ -10,7 +10,7 @@ require_relative './lib/server_services_pb'
 require_relative './lib/worker_services_pb'
 
 class Master < MapReduceMaster::Service
-  attr_accessor :worker_timeout, :logger, :worker_count, :data, :files
+  attr_accessor :worker_timeout, :logger, :worker_count, :data, :files, :map_finished
   attr_reader :reduce_workers
 
   def initialize(logger:, worker_timeout: 10, reduce_count: 5, map_count: 5, worker_count: 0)
@@ -20,17 +20,19 @@ class Master < MapReduceMaster::Service
     @logger = logger
     @data = []
     @files = nil
+    @map_finished = false
   end
 
   def ping(worker_req, _)
     uuid = worker_req.uuid
     success = worker_req.success
     worker = data.find { |w| w[:uuid] == uuid }
-    worker[:status] = 'idle'
+    worker[:status] = 0
 
     if success == 'true'
       logger.info("[Master] Worker #{uuid} completed the map operation succesful")
     else
+      logger.info("[Master] Worker #{uuid} failed to complete the map opeartion successful")
       @files << worker_req.filename
     end
 
@@ -43,7 +45,7 @@ class Master < MapReduceMaster::Service
     ip = worker_req.ip
     mutex = Mutex.new
     mutex.lock
-    data << ({ uuid:, ip:, status: 'idle', type: })
+    data << ({ uuid:, ip:, status: 0 })
     # That count is being back by the ruby GIL
     @worker_count += 1
     @logger.info('[Master] Worker register success')
@@ -58,27 +60,49 @@ class Master < MapReduceMaster::Service
     logger.info('[Master] Finished!')
   end
 
+  def reduce(&block)
+    Thread.new do
+      loop do
+        next unless @map_finished == true
+
+        block = block.source.sub(/^\s*master\.reduce do\s*\n/, '').sub(/^\s*end\s*\n/, '')
+        message = Base64.encode64(block)
+        worker = data.select { |w| w[:status] == 0 }.first
+
+        stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
+        request = ReduceInfo.new(filename: './example.txt', block: message)
+        worker[:status] = 'processing'
+        stub.reduce_operation(request)
+
+        break
+      end
+    end
+  end
+
   def map(&block)
     block = block.source.sub(/^\s*master\.map do\s*\n/, '').sub(/^\s*end\s*\n/, '')
     message = Base64.encode64(block)
     Thread.new do
       loop do
-        Async do
-          workers = data.select { |w| w[:status] == 'idle' && w[:type] == 'map' }.first(files.count)
+        @map_finished = true if files.empty?
+        break if files.empty?
 
-          break if files.empty? && workers.count.positive?
+        Async do
+          workers = data.select { |w| w[:status] == 0 }.first(files.count)
 
           semaphore = Async::Semaphore.new(workers.count)
+          tasks = []
 
           workers.each do |worker|
-            semaphore.async do
+            tasks << semaphore.async do
               stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
               request = MapInfo.new(filename: files.pop, block: message)
               worker[:status] = 'processing'
               stub.map_operation(request)
             end
           end
-        end
+          tasks.each(&:wait)
+        end.wait
       end
     end
   end

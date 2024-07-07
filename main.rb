@@ -15,10 +15,19 @@ def start_master(_files, reduce_count, worker_timeout, worker_count, logger, map
   master.distribute_input
   master.map do
     proc do |input|
-      input = input.gsub(/[\s,'"!]/, '')
-      input.each_char do |l|
-        emit(l, count: 1)
+      input = input.gsub(/[^\w\s]/, '')
+      words = input.split(/\s+/)
+      words.each do |l|
+        emit_intermediate(l, count: 1)
       end
+    end
+  end
+  master.reduce do
+    proc do |input|
+      result = input.each_with_object(Hash.new(0)) do |(flag, number), acc|
+        acc[flag] += number
+      end
+      emit(result.to_a[0], count: result.to_a[1])
     end
   end
   master

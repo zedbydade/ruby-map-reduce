@@ -38,6 +38,26 @@ class Worker < WorkerServer::Service
     stub.ping(request)
   end
 
+  def reduce_operation(worker_req, _)
+    data = sort_map_file(worker_req.filename)
+    unique_keys = data.map { |item| item[0] }.uniq
+    logger.info('[Worker] Starting Reduce Operation')
+    Async do
+      1.upto(unique_keys.count) do |i|
+        Async do
+          results = data.select { |item| item[0] == unique_keys[i] }
+          block = eval(Base64.decode64(worker_req.block))
+          response = block.call(results)
+          File.open('./example_reduce.txt', 'a') do |file|
+            file.puts response
+          end
+        end
+      end
+    end
+    logger.info('[Worker] Finished Reduce Operation')
+    Empty.new
+  end
+
   def start
     grpc_server = GRPC::RpcServer.new
     grpc_server.add_http2_port("0.0.0.0:#{port}", :this_port_is_insecure)
@@ -67,9 +87,21 @@ class Worker < WorkerServer::Service
 
   private
 
-  def emit(k, count:)
+  def sort_map_file(file_path)
+    file_data = []
+    File.open(file_path, 'r') do |file|
+      file.each_line do |line|
+        file_data << eval(line.strip)
+      end
+    end
+    file_data.sort_by { |item| item[0] }
+  end
+
+  def emit_intermediate(k, count:)
     result << [k, count]
   end
+
+  alias emit emit_intermediate
 
   def generate_uuid
     SecureRandom.uuid
