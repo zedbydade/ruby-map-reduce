@@ -10,13 +10,12 @@ require_relative './lib/server_services_pb'
 require_relative './lib/worker_services_pb'
 
 class Master < MapReduceMaster::Service
-  attr_accessor :worker_timeout, :logger, :worker_count, :data, :files, :map_finished
-  attr_reader :reduce_workers
+  attr_accessor :logger, :worker_count, :map_count, :data, :files, :map_finished
 
-  def initialize(logger:, worker_timeout: 10, reduce_count: 5, map_count: 5, worker_count: 0)
-    @worker_timeout = worker_timeout
-    @worker_count = worker_count
+  def initialize(logger:, map_count: 5, file:)
+    @file = file
     @map_count = map_count
+    @worker_count = 0
     @logger = logger
     @data = []
     @files = nil
@@ -56,7 +55,7 @@ class Master < MapReduceMaster::Service
 
   def wait_for_enough_workers
     logger.info('[Master] Wait for the creation of workers')
-    Worker.start_worker(logger, worker_count)
+    Worker.start_worker(logger, map_count)
     logger.info('[Master] Finished!')
   end
 
@@ -108,7 +107,7 @@ class Master < MapReduceMaster::Service
   end
 
   def distribute_input
-    path_name = Pathname.new('./test/joyboy.txt')
+    path_name = @file
     key = path_name.to_path
     logger.info('[Master] Start to distribute input')
     @files = split_files(key, path_name)

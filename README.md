@@ -47,8 +47,8 @@ require_relative 'master'
 ### Define the start function:
 
 ```ruby
-def start_master(_files, reduce_count, worker_timeout, worker_count, logger, map_count)
-  master = Master.new(reduce_count:, worker_timeout:, logger:, map_count:, worker_count:)
+def start_master(file, logger, map_count)
+  master = Master.new(file:, logger:, map_count:)
   grpc_server = GRPC::RpcServer.new
   grpc_server.add_http2_port('0.0.0.0:50051', :this_port_is_insecure)
   grpc_server.handle(master)
@@ -82,7 +82,7 @@ end
 
 ```ruby
 logger = Logger.new($stdout)
-master = start_master(nil, 5, 40, 10, logger, 5)
+master = start_master(Filepath.new('./test/file.txt'),logger, 5)
 logger.info(master.data)
 
 loop do
@@ -94,13 +94,9 @@ end
 
 The start_master function accepts the following parameters:
 
-* _files: The input files to be processed (currently unused).
-* reduce_count: The number of reduce tasks.
-* worker_timeout: The timeout for worker nodes.
-* worker_count: The number of worker nodes.
+* file: The input file to be processed.
 * logger: The logger instance for logging.
 * map_count: The number of map tasks.
 
 ## License 
 This project is licensed under the MIT License. See the LICENSE file for details.
-
