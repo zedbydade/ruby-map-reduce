@@ -1,8 +1,8 @@
-require_relative './lib/worker_services_pb'
+require_relative './grpc/worker_services_pb'
+require_relative './grpc/server_services_pb'
+require_relative './grpc/server_pb'
 require 'base64'
 require 'google/protobuf'
-require_relative './lib/server_services_pb'
-require_relative './lib/server_pb'
 require 'async'
 require 'logger'
 

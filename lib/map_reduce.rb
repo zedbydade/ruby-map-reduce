@@ -1,15 +1,14 @@
+require_relative './grpc/server_services_pb'
+require_relative './grpc/worker_services_pb'
 require 'grpc'
 require 'async'
 require 'async/semaphore'
 require 'pathname'
-require_relative 'reduce_worker'
 require_relative 'worker'
 require 'digest'
 require 'method_source'
-require_relative './lib/server_services_pb'
-require_relative './lib/worker_services_pb'
 
-class Master < MapReduceMaster::Service
+class MapReduce < MapReduceMaster::Service
   attr_accessor :logger, :worker_count, :map_count, :data, :files, :map_finished
 
   def initialize(logger:, map_count: 5, file:)
@@ -117,7 +116,9 @@ class Master < MapReduceMaster::Service
 
   def split_files(key, file)
     @encrypt_key = generate_digest_key(key)
+    p "Going to pritn encrypt_key = #{@encrypt_key}"
     FileUtils.mkdir_p("./files/#{@encrypt_key}")
+    p ""
     line_maximum = (File.open(file).count / @map_count).to_i
     file_data = file.readlines.map(&:chomp)
     file_number = file_data.length / line_maximum

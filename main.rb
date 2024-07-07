@@ -1,9 +1,9 @@
 require 'grpc'
 require 'logger'
-require_relative 'master'
+require 'map_reduce'
 
 def start_master(file, logger, map_count)
-  master = Master.new(logger:, map_count:, file:)
+  master = MapReduce.new(logger:, map_count:, file:)
   grpc_server = GRPC::RpcServer.new
   grpc_server.add_http2_port('0.0.0.0:50051', :this_port_is_insecure)
   grpc_server.handle(master)
