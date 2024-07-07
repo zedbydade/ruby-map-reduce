@@ -21,7 +21,7 @@ class Worker < WorkerServer::Service
   def map_operation(worker_req, _)
     block = eval(Base64.decode64(worker_req.block))
     block.call(File.read(worker_req.filename))
-    File.open('./example.txt', 'a') do |file|
+    File.open("files/#{worker_req.key}/map.txt", 'a') do |file|
       result.each do |array|
         file.puts array.inspect
       end
@@ -41,6 +41,7 @@ class Worker < WorkerServer::Service
   def reduce_operation(worker_req, _)
     data = sort_map_file(worker_req.filename)
     unique_keys = data.map { |item| item[0] }.uniq
+    file_path = "files/#{worker_req.key}/reduce.txt"
     logger.info('[Worker] Starting Reduce Operation')
     Async do
       1.upto(unique_keys.count) do |i|
@@ -48,13 +49,14 @@ class Worker < WorkerServer::Service
           results = data.select { |item| item[0] == unique_keys[i] }
           block = eval(Base64.decode64(worker_req.block))
           response = block.call(results)
-          File.open('./example_reduce.txt', 'a') do |file|
+          File.open(file_path, 'a') do |file|
             file.puts response
           end
         end
       end
     end
     logger.info('[Worker] Finished Reduce Operation')
+    logger.info("[Worker] File stored at #{file_path}")
     Empty.new
   end
 

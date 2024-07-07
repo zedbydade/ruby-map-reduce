@@ -70,7 +70,7 @@ class Master < MapReduceMaster::Service
         worker = data.select { |w| w[:status] == 0 }.first
 
         stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
-        request = ReduceInfo.new(filename: './example.txt', block: message)
+        request = ReduceInfo.new(filename: "files/#{@encrypt_key}/map.txt", block: message, key: @encrypt_key)
         worker[:status] = 'processing'
         stub.reduce_operation(request)
 
@@ -96,7 +96,7 @@ class Master < MapReduceMaster::Service
           workers.each do |worker|
             tasks << semaphore.async do
               stub = WorkerServer::Stub.new(worker[:ip], :this_channel_is_insecure)
-              request = MapInfo.new(filename: files.pop, block: message)
+              request = MapInfo.new(filename: files.pop, block: message, key: @encrypt_key)
               worker[:status] = 'processing'
               stub.map_operation(request)
             end
@@ -117,14 +117,14 @@ class Master < MapReduceMaster::Service
   private
 
   def split_files(key, file)
-    encrypt_key = generate_digest_key(key)
-    FileUtils.mkdir_p("./files/#{encrypt_key}")
+    @encrypt_key = generate_digest_key(key)
+    FileUtils.mkdir_p("./files/#{@encrypt_key}")
     line_maximum = (File.open(file).count / @map_count).to_i
     file_data = file.readlines.map(&:chomp)
     file_number = file_data.length / line_maximum
     files = []
     file_number.times do |index|
-      path = "./files/#{encrypt_key}/file_#{index}"
+      path = "./files/#{@encrypt_key}/file_#{index}"
       File.write(path, file_data.slice!(0..line_maximum))
       files << path
     end

@@ -15,9 +15,11 @@ message MapInfoResult {
 message MapInfo {
   string filename = 1;
   string block = 2;
+  string key = 3;
 }
 
 message ReduceInfo {
   string filename = 1;
   string block = 2;
+  string key = 3;
 }
