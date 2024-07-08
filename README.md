@@ -39,16 +39,14 @@ To use the framework, you need to define your map and reduce functions and start
 ### Require the necessary files and libraries:
 
 ```ruby
-require 'grpc'
-require 'logger'
-require_relative 'master'
+require 'reduce_map'
 ```
 
 ### Define the start function:
 
 ```ruby
 def start_master(file, logger, map_count)
-  master = Master.new(file:, logger:, map_count:)
+  master = MapReduce.new(file:, logger:, map_count:)
   grpc_server = GRPC::RpcServer.new
   grpc_server.add_http2_port('0.0.0.0:50051', :this_port_is_insecure)
   grpc_server.handle(master)
